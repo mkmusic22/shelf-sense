@@ -3,19 +3,12 @@ import datetime
 from typing import cast
 
 interface: backend.UserData = backend.UserData("database.db")
-print("\t\t\tShelfSense — Your Local Smart Inventory")
+print("ShelfSense — Your Local Smart Inventory")
 if interface.alr_init:
-    print(f"Name: {interface.get_user_data().get('username')}")
-    print(f"User ID: {interface.get_user_data().get('id')}")
+    print("Name:", interface.get_user_data()["username"])
+    print("User ID:", interface.get_user_data()["id"])
     print()
     print("Currently in your inventory:")
-    print()
-    print("Expired Items:")
-    if interface.check_to_expire() is None:
-        print("No items that are expired at the moment.")
-    else:
-        for item in interface.check_to_expire():
-            print(f"{item['name']}\nManufactured on {item['mfd_date']}\nAdded on {item['add_date']}\nExpired on {item['expiry']}")
 else:
     username = input("Enter your permanent username: ")
     interface.user_init(username)
@@ -62,5 +55,6 @@ while True:
                 print(f"{item['name']}\nManufactured on {item['mfd_date']}\nAdded on {item['add_date']}\nExpires on {item['expiry']}")
     elif input_choice == "5":
         interface.push_to_db()
-        print("Exiting. Thank you for logging on to ShelfSense. Will refresh expired items on next load.")
         break
+    print()
+print("Exiting. Thank you for logging on to ShelfSense. Will refresh expired items on next load.")
