@@ -1,4 +1,5 @@
 import sqlite3
+from typing import Any, Dict, cast
 import uuid
 import datetime
 
@@ -12,7 +13,7 @@ class UserData:
     cursor =None
     """Cursor object for the SQLite database. Do not modify directly, use the constructor to set this value."""
     
-    user_data = {}
+    user_data: Dict[str, str] = {"username": "", "id": ""}
     """Dictionary to store user data. Contains the following keys:
     "username": The username of the user.
     "id": The unique user ID generated based on the username.
@@ -33,20 +34,32 @@ class UserData:
         """The main class which handles most of the functions. Accepts a path to the database file."""
         self.dbpath = dbpath
         self.cn = sqlite3.connect(dbpath)
-        self.cursor =self.cn.cursor()
-        self.cursor.execute("SELECT count(grocery_data) FROM sqlite_master WHERE type='table';")
-        if self.cursor.fetchone():
-            self.alr_init =True
-            self.cursor.execute("SELECT * FROM grocery_data;")
-            self.grocery_data =self.cursor.fetchall()
-            self.cursor.execute("SELECT * FROM user_data;")
-            self.user_data =self.cursor.fetchall()
-        else:
-            self.alr_init = False
+        self.cursor = self.cn.cursor()
+        try:
+            self.cursor.execute("SELECT COUNT(*) FROM grocery_data;")
+            if self.cursor.fetchone()[0] > 0:
+                self.alr_init =True
+                self.cursor.execute("SELECT * FROM grocery_data;")
+                self.grocery_data = self.cursor.fetchall()
+                self.cursor.execute("SELECT * FROM user_data;")
+                self.user_data = cast(Dict[str, str], self.cursor.fetchall())
+            else:
+                self.alr_init = False
+        except:
+            pass
+
     def user_init(self, username):
         """Initialises the user data and create a new user in the database. Accepts a permanent username and generates a unique user ID based on it."""
         self.user_data["username"] = username
         self.user_data["id"] = uuid.uuid3(uuid.NAMESPACE_DNS, username).hex
+        assert self.cursor is not None
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS user_data (username TEXT, id TEXT);")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS grocery_data (name TEXT, mfd_date TEXT, add_date TEXT, category TEXT, expiry TEXT, id TEXT);")
+        self.cursor.execute("INSERT INTO user_data (username, id) VALUES (?, ?);", (self.user_data["username"], self.user_data["id"]))
+
+    def get_user_data(self) -> Dict[str, str]:
+        """Returns the user data as a dictionary."""
+        return self.user_data
         
     def add_item(self, name, mfd_date, add_date, category, expiry):
         """Adds an item to the grocery data list. Accepts the name of the item, the date it was added, its category, and its expiry date."""
@@ -68,13 +81,16 @@ class UserData:
         """Checks for items that are about to expire in the grocery data list. Returns a list of items that are about to expire."""
         items = []
         for item in self.grocery_data:
-            if item["expiry"] < (datetime.datetime.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d"):
+            if item["expiry"] < (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d"):
                 items.append(item)
         return items
         
     def push_to_db(self):
         """Pushes the user data and grocery data to the database in python."""
-        keys = ("name", "role", "city")
-        rows_to_insert = [tuple(d[key] for key in keys) for d in self.grocery_data]
-        self.cursor.executemany("INSERT INTO employees (name, role, city) VALUES (%s, %s, %s)", rows_to_insert)
+        keys = ("name", "mfd_date", "add_date", "category", "expiry", "id")
+        rows_to_insert = [tuple(d[key] for key in keys if key in d) for d in self.grocery_data]
+        assert self.cursor is not None
+        assert self.cn is not None
+        self.cursor.executemany("INSERT INTO grocery_data (name, mfd_date, add_date, category, expiry, id) VALUES (?, ?, ?, ?, ?, ?)", rows_to_insert)
+        self.cn.commit()
         
