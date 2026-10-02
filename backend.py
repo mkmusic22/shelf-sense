@@ -32,12 +32,15 @@ class UserData:
     
     def __init__(self, dbpath):
         """The main class which handles most of the functions. Accepts a path to the database file."""
+
         self.dbpath = dbpath
         self.cn = sqlite3.connect(dbpath)
         self.cursor = self.cn.cursor()
         self.grocery_data = []
         self.user_data = {"username": "", "id": ""}
+
         try:
+            # SQLite does not support Date objects, so use TEXT. So that I remember. :0
             self.cursor.execute("CREATE TABLE IF NOT EXISTS user_data (username TEXT, id TEXT);")
             self.cursor.execute("CREATE TABLE IF NOT EXISTS grocery_data (name TEXT, mfd_date TEXT, add_date TEXT, category TEXT, expiry TEXT, id TEXT);")
             self.cn.commit()
@@ -108,10 +111,12 @@ class UserData:
         
     def push_to_db(self):
         """Pushes the user data and grocery data to the database in python."""
-        keys = ("name", "mfd_date", "add_date", "category", "expiry", "id")
-        rows_to_insert = [tuple(d[key] for key in keys if key in d) for d in self.grocery_data]
+
         assert self.cursor is not None
         assert self.cn is not None
+
+        keys = ("name", "mfd_date", "add_date", "category", "expiry", "id")
+        rows_to_insert = [tuple(d[key] for key in keys if key in d) for d in self.grocery_data]
         self.cursor.executemany("INSERT INTO grocery_data (name, mfd_date, add_date, category, expiry, id) VALUES (?, ?, ?, ?, ?, ?)", rows_to_insert)
         self.cn.commit()
         
