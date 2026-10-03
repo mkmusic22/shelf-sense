@@ -27,16 +27,18 @@ while True:
 
     if input_choice == "1":
         name = input("Enter the name of the item: ")
-        mfd_date = input("Enter the manufacture date of the item (YYYY-MM-DD): ")
+        mfd_date = cast(datetime.date, input("Enter the manufacture date of the item (YYYY-MM-DD): "))
         add_date = datetime.date.today().strftime("%Y-%m-%d")
         category = input("Enter the category of the item: ")
-        expiry = input("Enter the expiry date of the item (YYYY-MM-DD): ")
+        expiry = cast(datetime.date, input("Enter the expiry date of the item (YYYY-MM-DD): "))
         interface.add_item(name, mfd_date, add_date, category, expiry)
         print(f"{name} has been added to your inventory.")
     elif input_choice == "2":
         name = input("Enter the name of the item to remove: ")
-        interface.remove_item(name)
-        print(f"{name} has been removed from your inventory.")
+        if interface.remove_item(name) is None:
+            print(f"{name} has been removed from your inventory.")
+        else:
+            print()
     elif input_choice == "3":
         expired_items = interface.check_expired()
         if not expired_items:

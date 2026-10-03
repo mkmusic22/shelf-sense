@@ -1,5 +1,5 @@
 import sqlite3
-from typing import Any, Dict, cast
+from typing import Any, Dict, List, cast
 import uuid
 import datetime
 
@@ -19,7 +19,7 @@ class UserData:
     "id": The unique user ID generated based on the username.
     Do not modify directly, use the user_init() method to set these values."""
     
-    grocery_data = []
+    grocery_data: List[Dict] = []
     """List to store grocery data. Each item in the list is a dictionary with the following keys:
     "name": The name of the grocery item.
     "date": The date the item was added to the inventory.
@@ -40,7 +40,7 @@ class UserData:
         self.user_data = {"username": "", "id": ""}
 
         try:
-            # SQLite does not support Date objects, so use TEXT. So that I remember. :0
+            # Reminder: SQLite does not support Date objects, so use TEXT. :0
             self.cursor.execute("CREATE TABLE IF NOT EXISTS user_data (username TEXT, id TEXT);")
             self.cursor.execute("CREATE TABLE IF NOT EXISTS grocery_data (name TEXT, mfd_date TEXT, add_date TEXT, category TEXT, expiry TEXT, id TEXT);")
             self.cn.commit()
@@ -51,10 +51,10 @@ class UserData:
                 self.grocery_data = [
                     {
                         "name": row[0],
-                        "mfd_date": row[1],
-                        "add_date": row[2],
+                        "mfd_date": cast(datetime.date, row[1]),
+                        "add_date": cast(datetime.date, row[2]),
                         "category": row[3],
-                        "expiry": row[4],
+                        "expiry": cast(datetime.date, row[4]),
                         "id": row[5],
                     }
                     for row in self.cursor.fetchall()
@@ -72,26 +72,30 @@ class UserData:
 
     def user_init(self, username):
         """Initialises the user data and create a new user in the database. Accepts a permanent username and generates a unique user ID based on it."""
+
         self.user_data["username"] = username
         self.user_data["id"] = uuid.uuid3(uuid.NAMESPACE_DNS, username).hex
+        list_to_insert = (self.user_data["username"], self.user_data["id"])
+
         assert self.cursor is not None
         self.cursor.execute("CREATE TABLE IF NOT EXISTS user_data (username TEXT, id TEXT);")
         self.cursor.execute("CREATE TABLE IF NOT EXISTS grocery_data (name TEXT, mfd_date TEXT, add_date TEXT, category TEXT, expiry TEXT, id TEXT);")
-        self.cursor.execute("INSERT INTO user_data (username, id) VALUES (?, ?);", (self.user_data["username"], self.user_data["id"]))
+        self.cursor.execute("INSERT INTO user_data (username, id) VALUES (?, ?);", list_to_insert)
         assert self.cn is not None
         self.cn.commit()
 
-    def get_user_data(self) -> Dict[str, str]:
+    def get_user_data(self):
         """Returns the user data as a dictionary."""
         return self.user_data
         
     def add_item(self, name, mfd_date, add_date, category, expiry):
         """Adds an item to the grocery data list. Accepts the name of the item, the date it was added, its category, and its expiry date."""
-        self.grocery_data.append({"name": name, "mfd_date": mfd_date, "add_date": add_date, "category": category, "expiry": expiry, "id": uuid.uuid3(uuid.NAMESPACE_DNS, name).hex})
+        self.grocery_data.append({"name": name.lower(), "mfd_date": mfd_date, "add_date": add_date, "category": category, "expiry": expiry, "id": uuid.uuid3(uuid.NAMESPACE_DNS, name).hex})
         
     def remove_item(self, name):
         """Removes an item from the grocery data list. Accepts the name of the item to be removed."""
         self.grocery_data = [item for item in self.grocery_data if item.get("name") != name]
+        return None
         
     def check_expired(self):
         """Checks for expired items in the grocery data list. Returns a list of expired items."""
@@ -119,4 +123,5 @@ class UserData:
         rows_to_insert = [tuple(d[key] for key in keys if key in d) for d in self.grocery_data]
         self.cursor.executemany("INSERT INTO grocery_data (name, mfd_date, add_date, category, expiry, id) VALUES (?, ?, ?, ?, ?, ?)", rows_to_insert)
         self.cn.commit()
+        self.cn.close()
         
