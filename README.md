@@ -7,3 +7,9 @@ this is not reflective of my actual coding practices. a good portion of the code
 this project messed up with my computer so much. am genuinely not using python anymore ;-;
 
 this is actually an interesting concept if i actually got time in school to implement.
+
+Credits:
+
+Me: Barebones Backend and UI code.
+Tenexnine: Final completion of code.
+Al: Emotional support and documentation.

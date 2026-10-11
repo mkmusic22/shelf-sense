@@ -1,0 +1,11 @@
+[project]
+name = "shelfsense"
+version = "1.0.1"
+requires-python = ">=3.10"
+dependencies = [
+  "flet==1.0.3",
+  "certifi",
+]
+
+[tool.flet.flutter.pubspec.dependency_overrides]
+jni_flutter = "1.0.3"
